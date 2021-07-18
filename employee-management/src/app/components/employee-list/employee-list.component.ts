@@ -1,5 +1,6 @@
+import { Subscription } from 'rxjs';
 import { Employee } from './../../models/employee.class';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { EmployeeService } from 'src/app/services/employee/employee.service';
 
 @Component({
@@ -7,7 +8,8 @@ import { EmployeeService } from 'src/app/services/employee/employee.service';
   templateUrl: './employee-list.component.html',
   styleUrls: ['./employee-list.component.css']
 })
-export class EmployeeListComponent implements OnInit {
+export class EmployeeListComponent implements OnInit, OnDestroy {
+  private subs: Subscription[] = [];
 
   public employees: Employee[] = [];
 
@@ -18,20 +20,24 @@ export class EmployeeListComponent implements OnInit {
   };
 
   loadEmployeeList(): void {
-    this.employeeService.getAllEmployee().subscribe(employeeList => {
-      this.employees = employeeList;
-    }, error => {
-      console.log(error.message);
-    });
+    this.subs.push(
+      this.employeeService.getAllEmployee().subscribe(employeeList => {
+        this.employees = employeeList;
+      }, error => {
+        console.log(error.message);
+      })
+    );
   };
 
   deleteEmployee(id: number): void {
-    this.employeeService.deleteEmployee(id).subscribe(deletedEmployee => {
-      let index = this.getIndex(deletedEmployee.id);
-      this.employees.splice(index, 1);
-    }, error => { 
-      console.log(error.message);
-    });
+    this.subs.push(
+      this.employeeService.deleteEmployee(id).subscribe(deletedEmployee => {
+        let index = this.getIndex(deletedEmployee.id);
+        this.employees.splice(index, 1);
+      }, error => { 
+        console.log(error.message);
+      })
+    );
   };
 
   getIndex(id:number): number {
@@ -42,6 +48,14 @@ export class EmployeeListComponent implements OnInit {
       };
     });
     return result;
+  };
+
+  ngOnDestroy(): void {
+    this.subs.forEach((sub) => {
+      if(sub) {
+        sub.unsubscribe();
+      }
+    })
   };
 
 }

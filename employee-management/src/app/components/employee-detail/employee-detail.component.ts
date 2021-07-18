@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Employee } from './../../models/employee.class';
 import { EmployeeService } from 'src/app/services/employee/employee.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -8,7 +9,8 @@ import { Router, ActivatedRoute } from '@angular/router';
   templateUrl: './employee-detail.component.html',
   styleUrls: ['./employee-detail.component.css']
 })
-export class EmployeeDetailComponent implements OnInit {
+export class EmployeeDetailComponent implements OnInit, OnDestroy {
+  private subs: Subscription[] = [];
 
   public detailEmployee: Employee = {
     id: 0,
@@ -25,15 +27,25 @@ export class EmployeeDetailComponent implements OnInit {
 
   loadDetail(): void {
     let id = Number.parseInt(this.activatedRoute.snapshot.params['id']);
-    this.employeeService.getEmployeeByID(id).subscribe(detail => {
-      this.detailEmployee = detail;
-    }, error => {
-      console.log(error.message);
-    });
+    this.subs.push(
+      this.employeeService.getEmployeeByID(id).subscribe(detail => {
+        this.detailEmployee = detail;
+      }, error => {
+        console.log(error.message);
+      })
+    );
   };
 
   navigateBack(): void {
     this.router.navigateByUrl("employees");
+  };
+
+  ngOnDestroy(): void {
+    this.subs.forEach((sub) => {
+      if(sub) {
+        sub.unsubscribe();
+      }
+    })
   };
 
 }

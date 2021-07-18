@@ -1,5 +1,6 @@
+import { Subscription } from 'rxjs';
 import { Employee } from './../../models/employee.class';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { EmployeeService } from 'src/app/services/employee/employee.service';
 import { Router, ActivatedRoute } from '@angular/router';
 
@@ -8,7 +9,8 @@ import { Router, ActivatedRoute } from '@angular/router';
   templateUrl: './update-employee.component.html',
   styleUrls: ['./update-employee.component.css']
 })
-export class UpdateEmployeeComponent implements OnInit {
+export class UpdateEmployeeComponent implements OnInit, OnDestroy {
+  private subs: Subscription[] = [];
 
   public employees: Employee[] = [];
   public updatedEmployee: Employee = {
@@ -26,23 +28,27 @@ export class UpdateEmployeeComponent implements OnInit {
 
   selectEmployee(): void {
     let id = Number.parseInt(this.activatedRoute.snapshot.params['id']);
-    this.employeeService.getEmployeeByID(id).subscribe(editEmployee => {
-      this.updatedEmployee = editEmployee;
-    }, error => {
-      console.log(error.message);
-    });
+    this.subs.push(
+      this.employeeService.getEmployeeByID(id).subscribe(editEmployee => {
+        this.updatedEmployee = editEmployee;
+      }, error => {
+        console.log(error.message);
+      })
+    );
   };
 
   updateEmployee(): void {
-    this.employeeService.updateEmployee(this.updatedEmployee.id, this.updatedEmployee).subscribe(emp => {
-      let index = this.getIndex(emp.id);
-      if(index !== -1) {
-        this.employees[index] = emp;
-      };
-      this.router.navigateByUrl("employees");
-    }, error => {
-      console.log(error.message);
-    });
+    this.subs.push(
+      this.employeeService.updateEmployee(this.updatedEmployee.id, this.updatedEmployee).subscribe(emp => {
+        let index = this.getIndex(emp.id);
+        if(index !== -1) {
+          this.employees[index] = emp;
+        };
+        this.router.navigateByUrl("employees");
+      }, error => {
+        console.log(error.message);
+      })
+    );
   };
 
   getIndex(id:number): number {
@@ -53,6 +59,14 @@ export class UpdateEmployeeComponent implements OnInit {
       };
     });
     return result;
+  };
+
+  ngOnDestroy(): void {
+    this.subs.forEach((sub) => {
+      if(sub) {
+        sub.unsubscribe();
+      }
+    })
   };
 
 }
